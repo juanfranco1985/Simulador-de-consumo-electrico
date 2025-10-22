@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Simulador de Consumo Eléctrico</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <style>
+    :root {
+      /* 🎨 Paleta personalizada */
+      --bs-primary: #00796b;   /* Verde azulado */
+      --bs-secondary: #0288d1; /* Azul brillante */
+      --bs-success: #43a047;   /* Verde positivo */
+      --bs-danger: #e53935;    /* Rojo alerta */
+      --bs-warning: #fbc02d;   /* Amarillo advertencia */
+      --bs-info: #29b6f6;      /* Celeste informativo */
+      --bs-light: #f1f8e9;     /* Fondo claro verdoso */
+      --bs-dark: #263238;      /* Gris oscuro elegante */
+    }
+
+    body {
+      background-color: var(--bs-light);
+      transition: background-color 0.3s, color 0.3s;
+    }
+
+    .navbar {
+      background-color: var(--bs-primary) !important;
+    }
+
+    .card-header {
+      background-color: var(--bs-secondary) !important;
+      color: white;
+    }
+
+    #alertBox {
+      font-weight: bold;
+    }
+
+    /* 🌙 Dark Mode */
+    body.dark-mode {
+      background-color: #121212;
+      color: #e0e0e0;
+    }
+
+    body.dark-mode .navbar {
+      background-color: #1e1e1e !important;
+    }
+
+    body.dark-mode .card {
+      background-color: #1e1e1e;
+      color: #e0e0e0;
+    }
+
+    body.dark-mode .card-header {
+      background-color: #333 !important;
+      color: #fff;
+    }
+
+    body.dark-mode table {
+      color: #e0e0e0;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navbar -->
+  <nav class="navbar navbar-dark mb-4">
+    <div class="container-fluid d-flex justify-content-between align-items-center">
+      <span class="navbar-brand mb-0 h1">⚡ Simulador de Consumo Eléctrico</span>
+      <button id="toggleDarkMode" class="btn btn-outline-light btn-sm">🌙 Modo Oscuro</button>
+    </div>
+  </nav>
+
+  <div class="container">
+
+    <!-- Card: Dispositivos -->
+    <div class="card mb-4 shadow-sm">
+      <div class="card-header">Agregar Dispositivo</div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <input id="name" type="text" class="form-control" placeholder="Nombre del dispositivo">
+          </div>
+          <div class="col-md-3">
+            <input id="power" type="number" class="form-control" placeholder="Potencia (W)">
+          </div>
+          <div class="col-md-3">
+            <input id="hours" type="number" class="form-control" placeholder="Horas/día">
+          </div>
+          <div class="col-md-2">
+            <button onclick="addDevice()" class="btn btn-success w-100">Agregar</button>
+          </div>
+        </div>
+        <div id="devices" class="mt-3"></div>
+      </div>
+    </div>
+
+    <!-- Card: Parámetros -->
+    <div class="card mb-4 shadow-sm">
+      <div class="card-header">Parámetros</div>
+      <div class="card-body row g-3">
+        <div class="col-md-6">
+          <label class="form-label">Tarifa eléctrica ($/kWh)</label>
+          <input id="tariff" type="number" step="0.01" value="0.15" onchange="saveTariff()" class="form-control">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Umbral de consumo (kWh/mes)</label>
+          <input id="threshold" type="number" step="1" value="300" onchange="saveThreshold()" class="form-control">
+        </div>
+        <div class="col-12 mt-3">
+          <button onclick="calculate()" class="btn btn-primary w-100">Calcular Consumo</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card: Resultados -->
+    <div class="card mb-4 shadow-sm">
+      <div class="card-header">Resultados</div>
+      <div class="card-body">
+        <h4 id="result" class="text-center"></h4>
+        <div id="alertBox" class="text-center fw-bold"></div>
+        <div id="recommendation" class="mt-3 text-center"></div>
+        <canvas id="chart" height="100"></canvas>
+      </div>
+    </div>
+
+    <!-- Card: Historial -->
+    <div class="card mb-4 shadow-sm">
+      <div class="card-header">Historial de cálculos</div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-striped" id="historyTable">
+            <thead class="table-dark">
+              <tr>
+                <th>Fecha</th>
+                <th>Consumo (kWh)</th>
+                <th>Costo ($)</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <button onclick="exportCSV()" class="btn btn-outline-primary">⬇️ Exportar CSV</button>
+      </div>
+    </div>
+
+    <!-- Card: Evolución -->
+    <div class="card mb-4 shadow-sm">
+      <div class="card-header">Evolución Temporal</div>
+      <div class="card-body">
+        <canvas id="evolutionChart" height="120"></canvas>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Script JS con la lógica -->
+  <script src="simulador.js"></script>
+
+  <!-- Script para Dark Mode persistente -->
+  <script>
+    const toggleBtn = document.getElementById("toggleDarkMode");
+
+    // Al cargar, aplicar preferencia guardada
+    window.onload = () => {
+      const savedMode = localStorage.getItem("theme");
+      if(savedMode === "dark"){
+        document.body.classList.add("dark-mode");
+        toggleBtn.textContent = "☀️ Modo Claro";
+      }
+    };
+
+    toggleBtn.addEventListener("click", () => {
+      document.body.classList.toggle("dark-mode");
+      if(document.body.classList.contains("dark-mode")){
+        localStorage.setItem("theme", "dark");
+        toggleBtn.textContent = "☀️ Modo Claro";
+      } else {
+        localStorage.setItem("theme", "light");
+        toggleBtn.textContent = "🌙 Modo Oscuro";
+      }
+    });
+  </script>
+</body>
+</html>
